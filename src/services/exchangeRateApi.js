@@ -1,15 +1,3 @@
-/**
- * exchangeRateApi.js
- * Service layer: all external API calls go here.
- * Components never call fetch/axios directly.
- * 
- * WHY: Single responsibility. If the API changes (new endpoint,
- * new auth header, different response shape), we change one file,
- * not 10 components.
- * 
- * WHY this matters in FinTech: Financial APIs change frequently.
- * Service layers are not optional architecture in production systems.
- */
 
 import axios from 'axios';
 
@@ -43,18 +31,21 @@ export async function fetchLatestRates(baseCurrency = 'USD') {
       nextUpdate: response.data.time_next_update_utc,
     };
   } catch (error) {
-    // Re-throw with a user-friendly message
+    // Re-throw with a user-friendly message, preserving the original
+    // error as `cause` so the full stack trace is available for debugging
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        throw new Error('Invalid API key. Please check your .env.local file.');
+        throw new Error('Invalid API key. Please check your .env.local file.', { cause: error });
       }
       if (error.response?.status === 429) {
-        throw new Error('API rate limit reached. Using cached data.');
+        throw new Error('API rate limit reached. Using cached data.', { cause: error });
       }
       if (error.code === 'ECONNABORTED') {
-        throw new Error('Request timed out. Check your internet connection.');
+        throw new Error('Request timed out. Check your internet connection.', { cause: error });
       }
     }
+    // Not an axios error (e.g. the result !== 'success' throw above) —
+    // re-throw as-is so we don't lose the original message
     throw error;
   }
 }
