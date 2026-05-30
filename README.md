@@ -1,142 +1,80 @@
 # Currency Converter & Exchange Rate Tracker
 
-A real-time currency converter with multi-currency comparison and rate history visualization — built with React, Axios, and ExchangeRate-API.
+A real-time currency conversion app built with React — designed to demonstrate
+production-grade API integration patterns used in fintech engineering roles.
 
-**Live Demo:** [your-vercel-url-here]
+**Live Demo:** [currency-converter-xi-lovat-50.vercel.app](https://currency-converter-xi-lovat-50.vercel.app)
 
 ---
 
-## Features
+## Overview
 
-- **Live Conversion** — Convert between 160+ currencies with real-time exchange rates
-- **Multi-Currency Table** — See one amount converted to 8+ currencies simultaneously
-- **Rate History Chart** — Visualize 7-day, 30-day, or 90-day rate trends
-- **Smart Caching** — Rates cached for 30 minutes to minimize API calls
-- **Offline Resilience** — Falls back to stale cache if the API is unavailable
-- **Searchable Selector** — Find any currency by code or name instantly
+This app solves a real problem: getting fast, visual, multi-currency rate
+comparisons without digging through bank portals or Google's buried converter.
+
+Three core panels:
+
+- **Converter** — Enter any amount, convert between 160+ currencies instantly.
+  Swap source/target with one click. Shows live rate and last-updated timestamp.
+
+- **Multi-Currency Comparison** — See one amount converted to 8 major currencies
+  side-by-side. Updates live as you type.
+
+- **Rate History Chart** — Visualize 7, 30, or 90-day trends for any currency
+  pair. Highlights the high, low, and percentage change over the period.
 
 ---
 
 ## Tech Stack
 
-| Layer  | Technology   | Why                                                    |
-| ------ | ------------ | ------------------------------------------------------ |
-| UI     | React + Vite | Fast dev server, modern tooling                        |
-| HTTP   | Axios        | Auto-throws on non-2xx, better interceptors than fetch |
-| Charts | Recharts     | Composable, React-native charting                      |
-| Dates  | date-fns     | Tree-shakeable, clean date formatting                  |
-| Styles | Tailwind CSS | Utility-first, consistent design                       |
+| Layer      | Technology   |
+| ---------- | ------------ |
+| UI         | React + Vite |
+| HTTP       | Axios        |
+| Charts     | Recharts     |
+| Dates      | date-fns     |
+| Styles     | Tailwind CSS |
+| Deployment | Vercel       |
 
 ---
 
 ## Architecture
 
-### Service Layer Pattern
-
-All API calls are isolated in `src/services/exchangeRateApi.js`. Components never call `fetch` or `axios` directly. This means if the API changes its endpoint or auth format, only one file needs updating.
 src/
-├── services/ # All external API calls (one file per API)
-├── hooks/ # Data fetching + business logic
-├── components/ # Pure UI, receives data as props
-├── utils/ # Caching, formatting, simulation helpers
-└── constants/ # Currency metadata, defaults
+├── services/ # API calls isolated here — components never call axios directly
+├── hooks/ # Data fetching, caching logic, and conversion state
+├── components/ # Pure UI — converter, comparison table, history chart
+├── utils/ # localStorage cache helpers, rate simulation, formatting
+└── constants/ # Currency metadata — codes, symbols, flags, decimal rules
 
-### Caching Strategy
+### Key patterns used
 
-Component mounts
-↓
-Check localStorage cache
-↓ fresh (< 30 min) ↓ stale or missing
-Use cached data Fetch from API
-↓
-Store in cache
-↓
-Update UI
+**Service Layer** — All HTTP calls live in `services/exchangeRateApi.js`. If the
+API changes its endpoint or auth, one file changes — not ten components.
 
-Caching reduces API calls by ~95% during normal use. Free tier limit is 1,500 requests/month — with 30-minute caching, 24/7 usage consumes ~1,440 requests/month maximum.
+**Response Caching** — Rates are cached in localStorage with a 30-minute TTL.
+Cuts API usage by ~95%, stays within the free tier (1,500 req/month), and keeps
+the app functional if the API is temporarily unavailable.
 
-### Cross-Rate Calculation
+**Graceful Degradation** — On API failure, the app falls back to the most recent
+cached data and shows a stale-data warning rather than breaking entirely.
 
-All rates are returned relative to a base currency (USD). To convert between any two non-USD currencies:
-result = amount × (1 / rates[from]) × rates[to]
-↑ convert from → USD ↑ convert USD → target
-
-Example: ₹10,000 → EUR
-10000 × (1 / 84.5) × 0.92 = €108.87
+**Cross-Rate Calculation** — Rates are USD-based. Any pair is computed as:
+`amount × (1 / rates[from]) × rates[to]` — converting through USD as an
+intermediary.
 
 ---
 
-## Rate History
+## FinTech Relevance
 
-> **Note:** ExchangeRate-API's free tier does not include historical data. The rate history chart uses **simulated data** — realistic daily fluctuations (±0.3%) applied to the current live rate. This is clearly a demo feature and is documented here for transparency.
+Currency conversion is a core function at Razorpay, Wise, Cashfree, and any
+platform handling cross-border payments. This project directly demonstrates:
 
-For real historical data, the app records each day's observed rate in `localStorage`. After 30+ days of use, the chart will display real observed rates instead of simulated ones.
+- Consuming and managing real financial API data
+- Understanding API rate limits and cost (caching isn't optional in production)
+- Handling async states — loading, error, stale data — the way a real app must
+- Architectural decisions that scale: service layers, custom hooks, separation
+  of concerns
 
----
-
-## Setup
-
-### Prerequisites
-
-- Node.js 18+
-- A free API key from [exchangerate-api.com](https://www.exchangerate-api.com) (no credit card required)
-
-### Installation
-
-```bash
-git clone https://github.com/YOUR_USERNAME/currency-converter.git
-cd currency-converter
-npm install
-```
-
-### Environment Variables
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-VITE_EXCHANGE_RATE_API_KEY=your_actual_key_here
-
-**Never commit `.env.local`.** It is gitignored by default.
-
-### Run locally
-
-```bash
-npm run dev
-```
-
----
-
-## API Security Note
-
-The API key is stored in `.env.local` and accessed via `import.meta.env.VITE_EXCHANGE_RATE_API_KEY`. In a Vite app, environment variables prefixed with `VITE_` are embedded in the client bundle at build time — meaning they are technically visible in the browser.
-
-For a production fintech app, the correct pattern is:
-
-- Keep the API key on a backend server (Node/Express, serverless function)
-- Frontend calls your backend, backend calls the exchange rate API
-- The key never reaches the client
-
-This project uses the direct approach as it's a portfolio demo with a free-tier key.
-
----
-
-## Deployment (Vercel)
-
-1. Push to GitHub (done)
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import this repo
-3. In **Environment Variables**, add:
-   - Key: `VITE_EXCHANGE_RATE_API_KEY`
-   - Value: your actual API key
-4. Click **Deploy**
-
----
-
-## What This Demonstrates
-
-- **REST API integration** — Consuming a real financial data API
-- **Async handling** — Loading, error, and success states properly managed
-- **Caching** — Understanding API rate limits and cost; implementing localStorage TTL cache
-- **Service layer** — Architectural pattern for maintainable API abstraction
-- **Graceful degradation** — App stays functional if the API goes down
+> Rate history uses simulated fluctuations (±0.3%/day on the live rate) since
+> historical data requires a paid API tier. This is documented transparently.
